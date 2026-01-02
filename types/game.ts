@@ -39,6 +39,7 @@ export interface Round {
   imposter_id: string; // Keep for backward compatibility
   imposter_ids?: string[]; // Array of imposter IDs
   spotlight_player_id: string | null;
+  voted_out_player_id: string | null; // Game Master's selection of who was voted out
   status: RoundStatus;
   winner: RoundWinner | null;
   created_at: string;

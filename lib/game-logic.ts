@@ -14,27 +14,8 @@ export async function calculateRoundResults(gameId: string, roundId: string) {
 
     if (roundError || !round) throw roundError;
 
-    // Get all votes
-    const { data: votes, error: votesError } = await supabase
-      .from('votes')
-      .select('*')
-      .eq('round_id', roundId);
-
-    if (votesError) throw votesError;
-
-    // Count votes
-    const voteCounts: Record<string, number> = {};
-    votes?.forEach((vote) => {
-      if (vote.voted_for_id) {
-        voteCounts[vote.voted_for_id] = (voteCounts[vote.voted_for_id] || 0) + 1;
-      }
-    });
-
-    // Find player with most votes
-    const maxVotes = Math.max(...Object.values(voteCounts), 0);
-    const votedOutPlayerId = Object.keys(voteCounts).find(
-      (playerId) => voteCounts[playerId] === maxVotes
-    );
+    // Use Game Master's selection of who was voted out
+    const votedOutPlayerId = round.voted_out_player_id;
 
     // Get all imposter IDs (support multiple imposters)
     const imposterIds = (round.imposter_ids && round.imposter_ids.length > 0)

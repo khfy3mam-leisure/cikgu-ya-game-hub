@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { calculateRoundResults } from '@/lib/game-logic';
 import { Game, GamePlayer, Round } from '@/types/game';
+import PlayerAvatar from './PlayerAvatar';
 
 interface GameMasterControlsProps {
   game: Game;
@@ -19,6 +20,9 @@ export default function GameMasterControls({ game, players, currentRound, gameId
   const [selectedImposters, setSelectedImposters] = useState<string[]>([]);
   const [secretWord, setSecretWord] = useState('');
   const [bonusHint, setBonusHint] = useState('');
+  const [votes, setVotes] = useState<Record<string, number>>({});
+  const [totalVotes, setTotalVotes] = useState(0);
+  const [selectedVotedOut, setSelectedVotedOut] = useState<string>('');
   const supabase = createClient();
 
   const handleStartRound = async () => {
@@ -70,6 +74,60 @@ export default function GameMasterControls({ game, players, currentRound, gameId
     }
   };
 
+  // Load votes during voting phase
+  useEffect(() => {
+    if (game.status === 'voting' && currentRound) {
+      loadVotes();
+      subscribeToVotes();
+    }
+  }, [game.status, currentRound?.id]);
+
+  const loadVotes = async () => {
+    if (!currentRound) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('votes')
+        .select('*')
+        .eq('round_id', currentRound.id);
+
+      if (error) throw error;
+
+      const voteCounts: Record<string, number> = {};
+      let total = 0;
+      data?.forEach((vote) => {
+        if (vote.voted_for_id) {
+          voteCounts[vote.voted_for_id] = (voteCounts[vote.voted_for_id] || 0) + 1;
+          total++;
+        }
+      });
+      setVotes(voteCounts);
+      setTotalVotes(total);
+    } catch (err) {
+      console.error('Error loading votes:', err);
+    }
+  };
+
+  const subscribeToVotes = () => {
+    if (!currentRound) return;
+
+    const channel = supabase
+      .channel(`gm-votes-${currentRound.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'votes',
+        filter: `round_id=eq.${currentRound.id}`,
+      }, () => {
+        loadVotes();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  };
+
   const handleUpdateStatus = async (newStatus: Game['status']) => {
     setLoading(true);
     try {
@@ -89,6 +147,13 @@ export default function GameMasterControls({ game, players, currentRound, gameId
           .update({ status: 'voting' })
           .eq('id', currentRound.id);
       } else if (currentRound && newStatus === 'round_end') {
+        // Update round with Game Master's selection before calculating
+        if (selectedVotedOut) {
+          await supabase
+            .from('rounds')
+            .update({ voted_out_player_id: selectedVotedOut })
+            .eq('id', currentRound.id);
+        }
         await calculateRoundResults(gameId, currentRound.id);
       }
     } catch (err) {
@@ -249,12 +314,57 @@ export default function GameMasterControls({ game, players, currentRound, gameId
   // Voting Phase
   if (game.status === 'voting') {
     return (
-      <div className="bg-white rounded-xl p-3">
-        <div className="text-xs text-gray-600 mb-2 text-center">Waiting for votes...</div>
+      <div className="bg-white rounded-xl p-3 space-y-3">
+        <div className="text-xs font-semibold text-gray-600 mb-2">
+          Votes: {totalVotes} / {players.length}
+        </div>
+        
+        {/* Vote Counts */}
+        <div className="space-y-1 max-h-32 overflow-y-auto">
+          {players.map((player) => {
+            const voteCount = votes[player.user_id!] || 0;
+            return (
+              <div
+                key={player.id}
+                className={`flex items-center justify-between p-2 rounded text-xs ${
+                  selectedVotedOut === player.user_id
+                    ? 'bg-purple-100 border-2 border-purple-500'
+                    : 'bg-gray-50'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <PlayerAvatar user={player.user} size={24} />
+                  <span className="font-semibold text-gray-800">{player.user?.username || 'Unknown'}</span>
+                </div>
+                <div className="text-gray-600">{voteCount} vote{voteCount !== 1 ? 's' : ''}</div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Select Who Was Voted Out */}
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1">
+            Who was voted out?
+          </label>
+          <select
+            value={selectedVotedOut}
+            onChange={(e) => setSelectedVotedOut(e.target.value)}
+            className="w-full px-2 py-1 text-xs border border-gray-300 rounded text-black"
+          >
+            <option value="">Select player...</option>
+            {players.map((p) => (
+              <option key={p.user_id} value={p.user_id}>
+                {p.user?.username || 'Unknown'} ({votes[p.user_id!] || 0} votes)
+              </option>
+            ))}
+          </select>
+        </div>
+
         <button
           onClick={() => handleUpdateStatus('round_end')}
-          disabled={loading}
-          className="w-full bg-green-500 text-white py-2 rounded-lg font-bold text-sm hover:bg-green-600 disabled:opacity-50"
+          disabled={loading || !selectedVotedOut}
+          className="w-full bg-green-500 text-white py-2 rounded-lg font-bold text-sm hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? '...' : '✓ End Round & Calculate'}
         </button>
