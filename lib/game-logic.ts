@@ -42,9 +42,9 @@ export async function calculateRoundResults(gameId: string, roundId: string) {
       : [round.imposter_id]; // Fallback to single imposter for backward compatibility
 
     // Check which imposters were voted out
-    const votedOutImposters = imposterIds.filter(id => id === votedOutPlayerId);
+    const votedOutImposters = imposterIds.filter((id: string) => id === votedOutPlayerId);
     const votedOutImposterCount = votedOutImposters.length;
-    const survivingImposters = imposterIds.filter(id => id !== votedOutPlayerId);
+    const survivingImposters = imposterIds.filter((id: string) => id !== votedOutPlayerId);
 
     // Determine winner: non-imposters win if at least one imposter was voted out
     const isAnyImposterVotedOut = votedOutImposterCount > 0;
