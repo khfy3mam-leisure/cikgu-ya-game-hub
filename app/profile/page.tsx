@@ -185,13 +185,25 @@ export default function ProfilePage() {
               {saving ? 'Updating...' : 'Update Profile Picture'}
             </button>
 
-            <div className="pt-4 border-t border-gray-200">
+            <div className="pt-4 border-t border-gray-200 space-y-3">
               <Link
                 href="/games"
                 className="block w-full text-center bg-gray-100 text-gray-800 py-3 rounded-xl font-semibold hover:bg-gray-200 transition-colors"
               >
                 Back to Games
               </Link>
+              
+              <button
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    localStorage.removeItem('userId');
+                  }
+                  router.push('/login');
+                }}
+                className="w-full bg-red-500 text-white py-3 rounded-xl font-semibold hover:bg-red-600 transition-colors"
+              >
+                🔄 Switch User
+              </button>
             </div>
           </div>
         </div>
