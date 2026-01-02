@@ -116,8 +116,30 @@ export default function GameMasterControls({ game, players, currentRound, gameId
       .eq('id', gameId);
   };
 
+  // Round End - Check this first before waiting, as it can transition to waiting
+  if (game.status === 'round_end') {
+    return (
+      <div className="bg-white rounded-xl p-3 space-y-2">
+        <button
+          onClick={handleNextRound}
+          disabled={loading}
+          className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2 rounded-lg font-bold text-sm hover:scale-105 transition-transform disabled:opacity-50"
+        >
+          → Next Round
+        </button>
+        <button
+          onClick={handleEndGame}
+          disabled={loading}
+          className="w-full bg-gray-500 text-white py-2 rounded-lg font-bold text-sm hover:bg-gray-600 transition-colors disabled:opacity-50"
+        >
+          🏆 End Game
+        </button>
+      </div>
+    );
+  }
+
   // Start Round Setup
-  if (game.status === 'waiting' || game.status === 'round_end') {
+  if (game.status === 'waiting') {
     return (
       <div className="bg-white rounded-xl p-3">
         <div className="text-xs font-semibold text-gray-600 mb-2">
@@ -235,28 +257,6 @@ export default function GameMasterControls({ game, players, currentRound, gameId
           className="w-full bg-green-500 text-white py-2 rounded-lg font-bold text-sm hover:bg-green-600 disabled:opacity-50"
         >
           {loading ? '...' : '✓ End Round & Calculate'}
-        </button>
-      </div>
-    );
-  }
-
-  // Round End
-  if (game.status === 'round_end') {
-    return (
-      <div className="bg-white rounded-xl p-3 space-y-2">
-        <button
-          onClick={handleNextRound}
-          disabled={loading}
-          className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2 rounded-lg font-bold text-sm hover:scale-105 transition-transform disabled:opacity-50"
-        >
-          → Next Round
-        </button>
-        <button
-          onClick={handleEndGame}
-          disabled={loading}
-          className="w-full bg-gray-500 text-white py-2 rounded-lg font-bold text-sm hover:bg-gray-600 transition-colors disabled:opacity-50"
-        >
-          🏆 End Game
         </button>
       </div>
     );
