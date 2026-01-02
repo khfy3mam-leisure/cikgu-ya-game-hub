@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import ExistingUserSelector from '@/components/ExistingUserSelector';
 import NewUserForm from '@/components/NewUserForm';
@@ -11,13 +11,15 @@ type Mode = 'select' | 'new' | 'existing';
 export default function LoginPage() {
   const [mode, setMode] = useState<Mode>('select');
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get('redirect') || '/games';
 
   const handleUserSelected = (userId: string) => {
     // Store user ID in session/localStorage
     if (typeof window !== 'undefined') {
       localStorage.setItem('userId', userId);
     }
-    router.push('/games');
+    router.push(redirect);
   };
 
   if (mode === 'select') {

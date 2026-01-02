@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { Round, GamePlayer, Vote } from '@/types/game';
+import { Round, GamePlayer, PlayerClue } from '@/types/game';
 import PlayerAvatar from './PlayerAvatar';
 
 interface RoundResultsProps {
@@ -12,8 +12,8 @@ interface RoundResultsProps {
 }
 
 export default function RoundResults({ round, players, userId }: RoundResultsProps) {
-  const [votedOutPlayer, setVotedOutPlayer] = useState<GamePlayer | null>(null);
-  const [imposterPlayer, setImposterPlayer] = useState<GamePlayer | null>(null);
+  const [votedOutPlayers, setVotedOutPlayers] = useState<GamePlayer[]>([]);
+  const [imposterPlayers, setImposterPlayers] = useState<GamePlayer[]>([]);
   const [userPlayer, setUserPlayer] = useState<GamePlayer | null>(null);
   const [pointsEarned, setPointsEarned] = useState(0);
   const supabase = createClient();
@@ -30,9 +30,14 @@ export default function RoundResults({ round, players, userId }: RoundResultsPro
 
   const loadRoundResults = async () => {
     try {
-      // Find imposter
-      const imposter = players.find(p => p.user_id === round.imposter_id);
-      setImposterPlayer(imposter || null);
+      // Get all imposter IDs (support multiple imposters)
+      const imposterIds = (round.imposter_ids && round.imposter_ids.length > 0)
+        ? round.imposter_ids
+        : [round.imposter_id]; // Fallback to single imposter
+
+      // Find all imposters
+      const imposters = players.filter(p => imposterIds.includes(p.user_id!));
+      setImposterPlayers(imposters);
 
       // Find current user's player data
       const userP = players.find(p => p.user_id === userId);
@@ -54,24 +59,26 @@ export default function RoundResults({ round, players, userId }: RoundResultsPro
         }
       });
 
-      // Find player with most votes
+      // Find player(s) with most votes
       const maxVotes = Math.max(...Object.values(voteCounts), 0);
-      const votedOutPlayerId = Object.keys(voteCounts).find(
+      const votedOutPlayerIds = Object.keys(voteCounts).filter(
         (playerId) => voteCounts[playerId] === maxVotes
       );
 
-      if (votedOutPlayerId) {
-        const votedOut = players.find(p => p.user_id === votedOutPlayerId);
-        setVotedOutPlayer(votedOut || null);
+      if (votedOutPlayerIds.length > 0) {
+        const votedOut = players.filter(p => votedOutPlayerIds.includes(p.user_id!));
+        setVotedOutPlayers(votedOut);
       }
 
       // Calculate points earned this round
-      const isImposter = round.imposter_id === userId;
-      const isImposterVotedOut = votedOutPlayerId === round.imposter_id;
+      const isImposter = imposterIds.includes(userId);
+      const votedOutImposterIds = votedOutPlayerIds.filter(id => imposterIds.includes(id));
+      const votedOutImposterCount = votedOutImposterIds.length;
       let earned = 0;
 
       if (isImposter) {
-        if (!isImposterVotedOut) {
+        const wasVotedOut = votedOutPlayerIds.includes(userId);
+        if (!wasVotedOut) {
           earned = 1; // Survived
           // Check if guessed word correctly
           const { data: guess } = await supabase
@@ -86,9 +93,8 @@ export default function RoundResults({ round, players, userId }: RoundResultsPro
           }
         }
       } else {
-        if (isImposterVotedOut) {
-          earned = 1; // Voted out imposter
-        }
+        // Non-imposters get 1 point per imposter voted out
+        earned = votedOutImposterCount;
       }
 
       setPointsEarned(earned);
@@ -97,7 +103,7 @@ export default function RoundResults({ round, players, userId }: RoundResultsPro
     }
   };
 
-  const isImposter = round.imposter_id === userId;
+  const isImposter = (round.imposter_ids && round.imposter_ids.includes(userId)) || round.imposter_id === userId;
   const isWinner = (round.winner === 'imposter' && isImposter) || 
                    (round.winner === 'non_imposters' && !isImposter);
 
@@ -114,26 +120,35 @@ export default function RoundResults({ round, players, userId }: RoundResultsPro
       </div>
 
       <div className="border-t border-gray-200 pt-2 space-y-2">
-        {imposterPlayer?.user && (
+        {imposterPlayers.length > 0 && (
           <div className="text-xs">
-            <div className="font-semibold text-gray-600 mb-1">The Imposter Was:</div>
-            <div className="flex items-center gap-2">
-              <PlayerAvatar user={imposterPlayer.user} size={32} />
-              <span className="font-bold text-gray-800">{imposterPlayer.user.username}</span>
+            <div className="font-semibold text-gray-600 mb-1">
+              The Imposter{imposterPlayers.length > 1 ? 's Were' : ' Was'}:
             </div>
+            {imposterPlayers.map((imposter) => (
+              <div key={imposter.id} className="flex items-center gap-2 mb-1">
+                <PlayerAvatar user={imposter.user!} size={32} />
+                <span className="font-bold text-gray-800">{imposter.user?.username}</span>
+              </div>
+            ))}
           </div>
         )}
 
-        {votedOutPlayer?.user && (
+        {votedOutPlayers.length > 0 && (
           <div className="text-xs">
             <div className="font-semibold text-gray-600 mb-1">Voted Out:</div>
-            <div className="flex items-center gap-2">
-              <PlayerAvatar user={votedOutPlayer.user} size={32} />
-              <span className="font-bold text-gray-800">{votedOutPlayer.user.username}</span>
-              {votedOutPlayer.user_id === round.imposter_id && (
-                <span className="text-green-600 font-bold">✓ Correct!</span>
-              )}
-            </div>
+            {votedOutPlayers.map((votedOut) => {
+              const wasImposter = imposterPlayers.some(imp => imp.user_id === votedOut.user_id);
+              return (
+                <div key={votedOut.id} className="flex items-center gap-2 mb-1">
+                  <PlayerAvatar user={votedOut.user!} size={32} />
+                  <span className="font-bold text-gray-800">{votedOut.user?.username}</span>
+                  {wasImposter && (
+                    <span className="text-green-600 font-bold">✓ Correct!</span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -156,4 +171,3 @@ export default function RoundResults({ round, players, userId }: RoundResultsPro
     </div>
   );
 }
-

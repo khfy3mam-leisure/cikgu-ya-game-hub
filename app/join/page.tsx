@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -8,6 +8,17 @@ export default function JoinGamePage() {
   const [inviteCode, setInviteCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    // Check if user is logged in on mount
+    const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
+    
+    if (!userId) {
+      // Redirect to login immediately if not signed in
+      router.push('/login?redirect=/join');
+      return;
+    }
+  }, [router]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,4 +106,3 @@ export default function JoinGamePage() {
     </div>
   );
 }
-

@@ -36,9 +36,19 @@ export async function calculateRoundResults(gameId: string, roundId: string) {
       (playerId) => voteCounts[playerId] === maxVotes
     );
 
-    // Determine winner
-    const isImposterVotedOut = votedOutPlayerId === round.imposter_id;
-    const winner = isImposterVotedOut ? 'non_imposters' : 'imposter';
+    // Get all imposter IDs (support multiple imposters)
+    const imposterIds = (round.imposter_ids && round.imposter_ids.length > 0)
+      ? round.imposter_ids
+      : [round.imposter_id]; // Fallback to single imposter for backward compatibility
+
+    // Check which imposters were voted out
+    const votedOutImposters = imposterIds.filter(id => id === votedOutPlayerId);
+    const votedOutImposterCount = votedOutImposters.length;
+    const survivingImposters = imposterIds.filter(id => id !== votedOutPlayerId);
+
+    // Determine winner: non-imposters win if at least one imposter was voted out
+    const isAnyImposterVotedOut = votedOutImposterCount > 0;
+    const winner = isAnyImposterVotedOut ? 'non_imposters' : 'imposter';
 
     // Update round with winner
     await supabase
@@ -58,9 +68,13 @@ export async function calculateRoundResults(gameId: string, roundId: string) {
     for (const player of players || []) {
       let pointsToAdd = 0;
 
-      if (player.user_id === round.imposter_id) {
-        // Imposter gets 1 point if they survive
-        if (!isImposterVotedOut) {
+      // Check if player is an imposter
+      const isImposter = imposterIds.includes(player.user_id!);
+      const wasVotedOut = player.user_id === votedOutPlayerId;
+
+      if (isImposter) {
+        // Imposter gets 1 point if they survive (not voted out)
+        if (!wasVotedOut) {
           pointsToAdd = 1;
 
           // Check if imposter guessed the word correctly
@@ -68,18 +82,17 @@ export async function calculateRoundResults(gameId: string, roundId: string) {
             .from('imposter_guesses')
             .select('*')
             .eq('round_id', roundId)
-            .eq('imposter_id', round.imposter_id)
+            .eq('imposter_id', player.user_id)
             .single();
 
           if (guess?.is_correct) {
             pointsToAdd += 1; // Bonus point
           }
         }
+        // Voted out imposters get 0 points
       } else {
-        // Non-imposters get 1 point if they vote out the imposter
-        if (isImposterVotedOut) {
-          pointsToAdd = 1;
-        }
+        // Non-imposters get 1 point per imposter voted out
+        pointsToAdd = votedOutImposterCount;
       }
 
       if (pointsToAdd > 0) {
@@ -90,10 +103,9 @@ export async function calculateRoundResults(gameId: string, roundId: string) {
       }
     }
 
-    return { winner, isImposterVotedOut };
+    return { winner, isImposterVotedOut: isAnyImposterVotedOut };
   } catch (err) {
     console.error('Error calculating round results:', err);
     throw err;
   }
 }
-
