@@ -29,7 +29,10 @@ npm install
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://zvggvztlfbyqjhsxmjxj.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
+GIT_TOKEN=your_github_personal_access_token_here
 ```
+
+**Note:** The `GIT_TOKEN` is optional and only needed if you want to push to GitHub. See [GIT_SETUP.md](./GIT_SETUP.md) for details.
 
 ### 3. Set Up Supabase Storage
 
@@ -93,6 +96,12 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 8. **Results**: Points are calculated and displayed
 9. **Next Round**: Repeat until all rounds complete
 10. **Leaderboard**: Final scores displayed
+
+## Git Setup
+
+For information on setting up Git authentication and pushing to GitHub, see [GIT_SETUP.md](./GIT_SETUP.md).
+
+The GitHub access token is stored in `.env.local` as `GIT_TOKEN` (this file is gitignored for security).
 
 ## Deployment to Vercel
 
