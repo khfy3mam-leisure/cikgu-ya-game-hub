@@ -59,7 +59,7 @@ export default function JoinGamePage() {
                 setInviteCode(e.target.value.toUpperCase());
                 setError(null);
               }}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent text-center text-2xl font-mono font-bold tracking-widest"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent text-center text-2xl font-mono font-bold tracking-widest text-black"
               placeholder="ABC123"
               maxLength={6}
               autoFocus

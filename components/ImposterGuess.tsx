@@ -98,7 +98,7 @@ export default function ImposterGuess({ round, secretWord, userId }: ImposterGue
             value={guessedWord}
             onChange={(e) => setGuessedWord(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-            className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+            className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-black"
             placeholder="Enter guess..."
           />
           <button

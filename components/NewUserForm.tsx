@@ -119,7 +119,7 @@ export default function NewUserForm({ onSuccess, onBack }: NewUserFormProps) {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent text-black"
               placeholder="Enter your username"
               required
               disabled={loading}

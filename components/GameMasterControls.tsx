@@ -180,14 +180,14 @@ export default function GameMasterControls({ game, players, currentRound, gameId
               type="text"
               value={secretWord}
               onChange={(e) => setSecretWord(e.target.value)}
-              className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+              className="w-full px-2 py-1 text-xs border border-gray-300 rounded text-black"
               placeholder="Secret word (non-imposters)"
             />
             <input
               type="text"
               value={bonusHint}
               onChange={(e) => setBonusHint(e.target.value)}
-              className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
+              className="w-full px-2 py-1 text-xs border border-gray-300 rounded text-black"
               placeholder="Bonus hint (imposter)"
             />
             <div className="flex gap-2">
