@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import ExistingUserSelector from '@/components/ExistingUserSelector';
@@ -8,7 +8,7 @@ import NewUserForm from '@/components/NewUserForm';
 
 type Mode = 'select' | 'new' | 'existing';
 
-export default function LoginPage() {
+function LoginContent() {
   const [mode, setMode] = useState<Mode>('select');
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -75,6 +75,20 @@ export default function LoginPage() {
       onSelect={handleUserSelected}
       onBack={() => setMode('select')}
     />
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center">
+          <div className="text-gray-600">Loading...</div>
+        </div>
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }
 
